@@ -3,52 +3,250 @@
 <head>
 <meta charset="UTF-8">
 <title>Carrera Celular 🏎️</title>
+
 <style>
-body {font-family: Arial, sans-serif; background:#f2f2f2; text-align:center;}
-.track {
-  width:90%;
+body{
+  font-family: Arial, sans-serif;
+  background:#f2f2f2;
+  text-align:center;
+  margin:0;
+}
+
+h1{margin:15px;}
+
+.track{
+  width:95%;
+  height:420px;
   margin:20px auto;
-  background:#e0e0e0;
+  background: url("pista.png") center/cover no-repeat;
+  border-radius:15px;
+  position:relative;
+  overflow:hidden;
+}
+
+.car{
+  width:110px;
+  height:110px;
+  position:absolute;
+  left:10px;
+  transition:left 0.6s ease;
+  transform: translateY(-50%);
+}
+
+#car1{ top:25%; }
+#car2{ top:45%; }
+#car3{ top:65%; }
+#car4{ top:85%; }
+
+.question-box{
+  background:white;
   padding:20px;
+  margin:20px auto;
+  width:70%;
   border-radius:10px;
 }
-.car {
-  height:70px;
-  width:70px;
-  margin:15px 0;
-  position: relative;
-  display:block;
+
+button{
+  padding:12px 25px;
+  margin:8px;
+  font-size:16px;
+  cursor:pointer;
 }
-.question-box{background:white; padding:20px; margin:20px auto; width:70%; border-radius:10px;}
-button{padding:10px 20px; margin:5px; font-size:16px;}
+
+/* PANEL DE ACIERTOS */
+.scoreboard{
+  background:#fff;
+  width:70%;
+  margin:10px auto;
+  padding:15px;
+  border-radius:10px;
+  display:grid;
+  grid-template-columns: repeat(4,1fr);
+  gap:10px;
+  font-weight:bold;
+}
+
+#countdown{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  color:white;
+  font-size:80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+#winnerScreen{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.9);
+  color:white;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:10000;
+}
+
+#winnerScreen h2{
+  font-size:60px;
+  margin:20px;
+}
+
+#winnerScreen button{
+  font-size:20px;
+  padding:15px 30px;
+}
 </style>
 </head>
+
 <body>
-<h1>🏁 Carrera Celular: Peroxisomas y Vacuolas 🧬</h1>
-<div class="track">
-<img id="car1" class="car" src="auto_verde.png" />
-<img id="car2" class="car" src="auto_rojo.png" />
-<img id="car3" class="car" src="auto_azul.png" />
-<img id="car4" class="car" src="auto_amarillo.png" />
+
+<h1>🏁 Carrera Celular: Peroxisomas y Vacuolas</h1>
+
+<div class="track" id="track">
+  <img id="car1" class="car" src="auto_verde.png">
+  <img id="car2" class="car" src="auto_rojo.png">
+  <img id="car3" class="car" src="auto_azul.png">
+  <img id="car4" class="car" src="auto_amarillo.png">
 </div>
+
+<!-- ACIERTOS -->
+<div class="scoreboard">
+  <div id="score1">Jugador 1: 0 / 5</div>
+  <div id="score2">Jugador 2: 0 / 5</div>
+  <div id="score3">Jugador 3: 0 / 5</div>
+  <div id="score4">Jugador 4: 0 / 5</div>
+</div>
+
 <div class="question-box">
-<h2 id="question"></h2>
-<div id="answers"></div>
+  <h2 id="question"></h2>
+  <div id="answers"></div>
 </div>
+
 <p>Turno del jugador: <strong id="turn">1</strong></p>
+
+<div id="countdown">3</div>
+
+<div id="winnerScreen">
+  <h2>🏆 GANADOR 🏆</h2>
+  <div id="winnerText"></div>
+  <button onclick="location.reload()">Jugar otra vez</button>
+</div>
+
 <script>
-let positions=[0,0,0,0]; let turn=0;
-const questions=[
-{q:"¿Qué orgánulo se encarga de la detoxificación celular?",a:["Vacuola","Peroxisoma","Ribosoma"],correct:1},
-{q:"¿Qué orgánulo almacena agua y sustancias?",a:["Mitocondria","Peroxisoma","Vacuola"],correct:2},
-{q:"¿En qué tipo de célula es más grande la vacuola?",a:["Animal","Vegetal","Procariota"],correct:1},
-{q:"Los peroxisomas contienen enzimas como:",a:["Catalasa","Amilasa","Pepsina"],correct:0}
+const MAX_ACIERTOS = 5;
+
+let positions=[0,0,0,0];
+let aciertos=[0,0,0,0];
+let turn=0;
+let gameActive=false;
+
+const questions=[ /* MISMAS 10 PREGUNTAS */ 
+ {q:"¿Qué son los peroxisomas?",
+  a:["Orgánulos que producen proteínas","Orgánulos encargados de la digestión celular",
+     "Orgánulos que realizan reacciones de oxidación y detoxificación","Orgánulos que almacenan agua"],
+  correct:2},
+ {q:"¿Qué son las vacuolas?",
+  a:["Orgánulos que producen energía","Vesículas de almacenamiento dentro de la célula",
+     "Orgánulos que sintetizan lípidos","Estructuras exclusivas de células animales"],
+  correct:1},
+ {q:"¿En qué tipo de células se encuentran los peroxisomas?",
+  a:["Solo en células animales","Solo en células vegetales","En células procariotas","En células eucariotas"],
+  correct:3},
+ {q:"¿En qué células es más grande la vacuola?",
+  a:["Células animales","Células bacterianas","Células vegetales","Células procariotas"],
+  correct:2},
+ {q:"¿Cuál es una función principal de los peroxisomas?",
+  a:["Síntesis de proteínas","Digestión de macromoléculas","Detoxificación del peróxido de hidrógeno","Producción de ATP"],
+  correct:2},
+ {q:"¿Qué enzima característica se encuentra en los peroxisomas?",
+  a:["Amilasa","Catalasa","ADN polimerasa","Pepsina"],
+  correct:1},
+ {q:"¿Cuál es una función de la vacuola?",
+  a:["Producción de energía","Almacenamiento de sustancias","Síntesis de ribosomas","Transporte de electrones"],
+  correct:1},
+ {q:"¿Cómo contribuye la vacuola a la célula vegetal?",
+  a:["Produce enzimas digestivas","Controla la información genética","Mantiene la turgencia celular","Realiza la respiración celular"],
+  correct:2},
+ {q:"¿Cuál es una diferencia entre peroxisomas y vacuolas?",
+  a:["Ambos contienen ADN",
+     "Los peroxisomas realizan reacciones metabólicas y las vacuolas almacenan sustancias",
+     "Ambos producen energía","Ambos solo están en células animales"],
+  correct:1},
+ {q:"¿Qué ocurriría si los peroxisomas no funcionaran correctamente?",
+  a:["Aumentaría la acumulación de sustancias tóxicas","Se detendría la fotosíntesis",
+     "Desaparecería el núcleo","Aumentaría la producción de ribosomas"],
+  correct:0}
 ];
+
 let currentQuestion=0;
-function loadQuestion(){const q=questions[currentQuestion]; document.getElementById("question").innerText=q.q; const aDiv=document.getElementById("answers"); aDiv.innerHTML=""; q.a.forEach((t,i)=>{const b=document.createElement("button"); b.innerText=t; b.onclick=()=>checkAnswer(i); aDiv.appendChild(b);});}
-function checkAnswer(i){if(i===questions[currentQuestion].correct){positions[turn]+=50; document.getElementById("car"+(turn+1)).style.marginLeft=positions[turn]+"px"; if(positions[turn]>=500){alert("🏆 ¡Jugador "+(turn+1)+" gana la carrera!"); location.reload();}}
-turn=(turn+1)%4; document.getElementById("turn").innerText=turn+1; currentQuestion=(currentQuestion+1)%questions.length; loadQuestion();}
-loadQuestion();
+
+const question=document.getElementById("question");
+const answers=document.getElementById("answers");
+const turnEl=document.getElementById("turn");
+const track=document.getElementById("track");
+
+function updateScores(){
+  for(let i=0;i<4;i++){
+    document.getElementById("score"+(i+1)).innerText =
+      `Jugador ${i+1}: ${aciertos[i]} / ${MAX_ACIERTOS}`;
+  }
+}
+
+function loadQuestion(){
+  if(!gameActive) return;
+  const q=questions[currentQuestion];
+  question.innerText=q.q;
+  answers.innerHTML="";
+  q.a.forEach((t,i)=>{
+    const b=document.createElement("button");
+    b.innerText=t;
+    b.onclick=()=>checkAnswer(i);
+    answers.appendChild(b);
+  });
+}
+
+function checkAnswer(i){
+  const pistaMax = track.clientWidth - 140;
+  const paso = pistaMax / MAX_ACIERTOS;
+
+  if(i === questions[currentQuestion].correct){
+    aciertos[turn]++;
+    positions[turn] = aciertos[turn] * paso;
+    document.getElementById("car"+(turn+1)).style.left = positions[turn] + "px";
+    updateScores();
+
+    if(aciertos[turn] >= MAX_ACIERTOS){
+      document.getElementById("winnerText").innerText =
+        "Jugador " + (turn+1) + " ganó con " + MAX_ACIERTOS + " aciertos 🎉";
+      document.getElementById("winnerScreen").style.display="flex";
+      gameActive=false;
+      return;
+    }
+  }
+
+  turn = (turn+1) % 4;
+  turnEl.innerText = turn + 1;
+  currentQuestion = (currentQuestion + 1) % questions.length;
+  loadQuestion();
+}
+
+window.onload=()=>{
+  const cd=document.getElementById("countdown");
+  cd.innerText="3";
+  setTimeout(()=>cd.innerText="2",1000);
+  setTimeout(()=>cd.innerText="1",2000);
+  setTimeout(()=>cd.innerText="¡YA!",3000);
+  setTimeout(()=>{
+    cd.style.display="none";
+    gameActive=true;
+    loadQuestion();
+  },3800);
+};
 </script>
+
 </body>
 </html>
